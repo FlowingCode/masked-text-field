@@ -1,0 +1,9 @@
+**/target
+**/node_modules
+**/package.json
+**/package-lock.json
+**/.DS_Store
+**/*.iml
+**/.idea
+**/webpack.config.js
+**/webpack.generated.js
