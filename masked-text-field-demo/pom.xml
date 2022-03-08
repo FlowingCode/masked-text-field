@@ -6,7 +6,7 @@
     <groupId>org.vaadin.addons.componentfactory</groupId>
     <artifactId>masked-text-field-demo</artifactId>
     <name>VCF Masked Text Field Demo</name>
-    <version>0.0.1</version>
+    <version>0.0.4</version>
     <packaging>war</packaging>
 
     <parent>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>org.vaadin.addons.componentfactory</groupId>
             <artifactId>masked-text-field</artifactId>
-            <version>0.0.1</version>
+            <version>0.0.4</version>
         </dependency>
     </dependencies>
 

@@ -13,7 +13,7 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 
-@NpmPackage(value = "@vaadin-component-factory/vcf-masked-text-field", version = "0.1.4")
+@NpmPackage(value = "@vaadin-component-factory/vcf-masked-text-field", version = "0.1.7")
 @JsModule("@vaadin-component-factory/vcf-masked-text-field/src/vcf-masked-text-field.js")
 @Tag("vcf-masked-text-field")
 @Uses(TextField.class)
@@ -91,6 +91,14 @@ public class MaskedTextField extends TextField {
         getEventBus().fireEvent(new ImaskCompleteEvent(this, true, maskedValue, unmaskedValue));
     }
 
+    @ClientCallable
+    public void _enterPressed(String data) {
+        JSONObject dataObj = new JSONObject(data);
+        this.setUnmaskedValue(dataObj.getString("unmaskedValue"), true);
+        this.setMaskedValue(dataObj.getString("maskedValue"), true);
+        getEventBus().fireEvent(new EnterPressEvent(this, true, maskedValue, unmaskedValue));
+    }
+
     public class ImaskAcceptEvent extends ImaskEvent {
         public ImaskAcceptEvent(MaskedTextField source, boolean fromClient, String maskedValue, String unmaskedValue) {
             super(source, fromClient, maskedValue, unmaskedValue);
@@ -122,6 +130,12 @@ public class MaskedTextField extends TextField {
         }
     }
 
+    public class EnterPressEvent extends ImaskEvent {
+        public EnterPressEvent(MaskedTextField source, boolean fromClient, String maskedValue, String unmaskedValue) {
+            super(source, fromClient, maskedValue, unmaskedValue);
+        }
+    }
+
     @FunctionalInterface
     public interface ImaskEventHandler {
         void handle(ImaskEvent imaskEvent);
@@ -135,6 +149,12 @@ public class MaskedTextField extends TextField {
 
     public Registration addImaskCompleteEventHandler(ImaskEventHandler handler) {
         return addListener(ImaskCompleteEvent.class, event -> {
+            handler.handle(event);
+        });
+    }
+
+    public Registration addEnterPressEventHandler(ImaskEventHandler handler) {
+        return addListener(EnterPressEvent.class, event -> {
             handler.handle(event);
         });
     }
