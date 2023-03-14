@@ -7,6 +7,7 @@ import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.dependency.NpmPackage;
 import com.vaadin.flow.component.dependency.Uses;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.shared.Registration;
 import org.json.JSONObject;
 
@@ -23,12 +24,18 @@ public class MaskedTextField extends TextField {
 
     private String maskedValue;
     private String unmaskedValue;
-
-    public MaskedTextField(Map<String, MaskedTextFieldOption> maskOptions) {
+    private TextFieldValidationSupport validationSupport;
+    private ValueChangeMode currentMode;
+    private int valueChangeTimeout = DEFAULT_CHANGE_TIMEOUT;
+    
+     public MaskedTextField(Map<String, MaskedTextFieldOption> maskOptions) {
         super();
         maskedValue = "";
         unmaskedValue = "";
         this.maskOptions = maskOptions;
+        
+        setInvalid(false);
+        setValueChangeMode(ValueChangeMode.ON_CHANGE);
     }
 
     public MaskedTextField(MaskedTextFieldOption... options) {
@@ -80,6 +87,7 @@ public class MaskedTextField extends TextField {
         JSONObject dataObj = new JSONObject(data);
         this.setUnmaskedValue(dataObj.getString("unmaskedValue"), true);
         this.setMaskedValue(dataObj.getString("maskedValue"), true);
+        this.setModelValue(dataObj.getString("maskedValue"), true);
         getEventBus().fireEvent(new ImaskAcceptEvent(this, true, maskedValue, unmaskedValue));
     }
 
@@ -88,6 +96,7 @@ public class MaskedTextField extends TextField {
         JSONObject dataObj = new JSONObject(data);
         this.setUnmaskedValue(dataObj.getString("unmaskedValue"), true);
         this.setMaskedValue(dataObj.getString("maskedValue"), true);
+        this.setModelValue(dataObj.getString("maskedValue"), true);
         getEventBus().fireEvent(new ImaskCompleteEvent(this, true, maskedValue, unmaskedValue));
     }
 
@@ -189,11 +198,15 @@ public class MaskedTextField extends TextField {
         }
         if(!maskedValue.isEmpty()) setMaskedValue(maskedValue, false);
         if(!unmaskedValue.isEmpty()) setMaskedValue(unmaskedValue, false);
+        
+        FieldValidationUtil.disableClientValidation(this);
     }
 
     @Override
     public void setValue(String value) {
-        setMaskedValue(value);
+        String notNullValue = value == null ? "" : value;
+        setMaskedValue(notNullValue, true);
+        super.setValue(notNullValue);
     }
 
     private synchronized void setUnmaskedValue(String value, boolean internal) {
@@ -211,4 +224,98 @@ public class MaskedTextField extends TextField {
             getElement().executeJs("$1.setMaskedValue($0);", value);
         }
     }
+    
+    /**
+     * Maximum number of characters (in Unicode code points) that the user can
+     * enter.
+     *
+     * @param maxLength
+     *            the maximum length
+     */
+    public void setMaxLength(int maxLength) {
+        super.setMaxlength(maxLength);
+        getValidationSupport().setMaxLength(maxLength);
+    }
+
+    /**
+     * Minimum number of characters (in Unicode code points) that the user can
+     * enter.
+     *
+     * @param minLength
+     *            the minimum length
+     */
+    public void setMinLength(int minLength) {
+        super.setMinlength(minLength);
+        getValidationSupport().setMinLength(minLength);
+    }
+
+    @Override
+    public void setRequired(boolean required) {
+        super.setRequired(required);
+        getValidationSupport().setRequired(required);
+    }
+
+    @Override
+    public void setPattern(String pattern) {
+        super.setPattern(pattern);
+        getValidationSupport().setPattern(pattern);
+    }
+
+    @Override
+    public void setRequiredIndicatorVisible(boolean requiredIndicatorVisible) {
+        super.setRequiredIndicatorVisible(requiredIndicatorVisible);
+        getValidationSupport().setRequired(requiredIndicatorVisible);
+    }
+
+    /**
+     * Performs server-side validation of the current value. This is needed
+     * because it is possible to circumvent the client-side validation
+     * constraints using browser development tools.
+     */
+    @Override
+    protected void validate() {
+        setInvalid(getValidationSupport().isInvalid(getValue()));
+    }
+    
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The default value is {@link ValueChangeMode#ON_CHANGE}.
+     */
+    @Override
+    public ValueChangeMode getValueChangeMode() {
+        return currentMode;
+    }
+
+    @Override
+    public void setValueChangeMode(ValueChangeMode valueChangeMode) {
+        currentMode = valueChangeMode;
+        setSynchronizedEvent(
+                ValueChangeMode.eventForMode(valueChangeMode, "value-changed"));
+        applyChangeTimeout();
+    }
+    
+    @Override
+    public void setValueChangeTimeout(int valueChangeTimeout) {
+        this.valueChangeTimeout = valueChangeTimeout;
+        applyChangeTimeout();
+    }
+
+    @Override
+    public int getValueChangeTimeout() {
+        return valueChangeTimeout;
+    }
+
+    private void applyChangeTimeout() {
+        ValueChangeMode.applyChangeTimeout(getValueChangeMode(),
+                getValueChangeTimeout(), getSynchronizationRegistration());
+    }
+    
+    private TextFieldValidationSupport getValidationSupport() {
+      if (validationSupport == null) {
+          validationSupport = new TextFieldValidationSupport(this);
+      }
+      return validationSupport;
+    }
+    
 }
